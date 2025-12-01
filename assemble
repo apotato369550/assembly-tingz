@@ -1,0 +1,69 @@
+#!/bin/bash
+# Assembly build and run script for DOS/8086 programs
+# Usage: assemble <file.asm> [--no-run]
+
+# Colors for output
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+YELLOW='\033[1;33m'
+NC='\033[0m' # No Color
+
+# Check if file argument provided
+if [ -z "$1" ]; then
+    echo -e "${RED}Error: No file specified${NC}"
+    echo "Usage: assemble <file.asm> [--no-run]"
+    exit 1
+fi
+
+# Get the input file
+ASM_FILE="$1"
+NO_RUN=false
+
+# Check for --no-run flag
+if [ "$2" == "--no-run" ]; then
+    NO_RUN=true
+fi
+
+# Check if file exists
+if [ ! -f "$ASM_FILE" ]; then
+    echo -e "${RED}Error: File '$ASM_FILE' not found${NC}"
+    exit 1
+fi
+
+# Check if file has .asm or .ASM extension
+if [[ ! "$ASM_FILE" =~ \.[aA][sS][mM]$ ]]; then
+    echo -e "${RED}Error: File must have .asm or .ASM extension${NC}"
+    exit 1
+fi
+
+# Get filename without extension
+BASENAME="${ASM_FILE%.*}"
+COM_FILE="${BASENAME}.com"
+
+echo -e "${YELLOW}Assembling: $ASM_FILE${NC}"
+
+# Assemble with NASM
+if nasm -f bin "$ASM_FILE" -o "$COM_FILE" 2>&1; then
+    echo -e "${GREEN}✓ Assembly successful: $COM_FILE${NC}"
+
+    # Show file size
+    SIZE=$(stat -c%s "$COM_FILE" 2>/dev/null || stat -f%z "$COM_FILE" 2>/dev/null)
+    echo -e "${GREEN}  Size: $SIZE bytes${NC}"
+
+    # Run in DOSBox unless --no-run flag is set
+    if [ "$NO_RUN" = false ]; then
+        echo -e "${YELLOW}Running in DOSBox...${NC}"
+
+        # Get the directory of the COM file
+        DIR=$(dirname "$COM_FILE")
+        FILE=$(basename "$COM_FILE")
+
+        # Run DOSBox with the COM file
+        dosbox -c "mount c \"$DIR\"" -c "c:" -c "$FILE" -c "exit"
+    else
+        echo -e "${YELLOW}Skipping execution (--no-run flag set)${NC}"
+    fi
+else
+    echo -e "${RED}✗ Assembly failed${NC}"
+    exit 1
+fi
