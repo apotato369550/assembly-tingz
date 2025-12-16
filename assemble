@@ -54,12 +54,14 @@ if nasm -f bin "$ASM_FILE" -o "$COM_FILE" 2>&1; then
     if [ "$NO_RUN" = false ]; then
         echo -e "${YELLOW}Running in DOSBox...${NC}"
 
-        # Get the directory of the COM file
-        DIR=$(dirname "$COM_FILE")
-        FILE=$(basename "$COM_FILE")
+        # Get the absolute path of the COM file and its directory
+        ABS_PATH=$(cd "$(dirname "$COM_FILE")" && pwd)
+        ABS_COM="$ABS_PATH/$(basename "$COM_FILE")"
+        FILE_NO_EXT=$(basename "$COM_FILE" .com)
 
-        # Run DOSBox with the COM file
-        dosbox -c "mount c \"$DIR\"" -c "c:" -c "$FILE" -c "exit"
+        # Run DOSBox with proper mounting and directory navigation
+        # Unmount C: first, then mount the correct directory
+        dosbox -c "mount -u c" -c "mount c \"$ABS_PATH\"" -c "c:" -c "$FILE_NO_EXT"
     else
         echo -e "${YELLOW}Skipping execution (--no-run flag set)${NC}"
     fi
